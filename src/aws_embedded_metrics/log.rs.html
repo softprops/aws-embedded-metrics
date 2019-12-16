@@ -264,6 +264,16 @@
 <span id="264">264</span>
 <span id="265">265</span>
 <span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">env</span>::{<span class="ident">Detector</span>, <span class="ident">EnvironmentProvider</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
@@ -429,6 +439,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">MetricLogger</span> {
+    <span class="doccomment">/// Create a new `MetricLogger` instance</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MetricLogger</span> {
         <span class="ident">MetricLogger</span> {
             <span class="ident">context</span>: <span class="ident">MetricContext</span>::<span class="ident">default</span>(),
@@ -442,6 +453,7 @@
         <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;metrics logger was flushed&quot;</span>);
     }
 
+    <span class="doccomment">/// Override default metric namespace</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_namespace</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">ns</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -449,6 +461,10 @@
         <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">set_namespace</span>(<span class="ident">ns</span>);
     }
 
+    <span class="doccomment">/// Set a request property to the metric event</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This will be logged for querying in CloudWatch insights</span>
+    <span class="doccomment">/// but not part of a metric dimension in CloudWatch metrics</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_property</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">name</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -457,6 +473,7 @@
         <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">set_property</span>(<span class="ident">name</span>, <span class="ident">value</span>);
     }
 
+    <span class="doccomment">/// Config a set of metrics dimensions</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">put_dimensions</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">dims</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">String</span><span class="op">&gt;</span>,
@@ -464,6 +481,9 @@
         <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">put_dimensions</span>(<span class="ident">dims</span>);
     }
 
+    <span class="doccomment">/// Add a metric value to the metric event</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// You can add up to 100 metrics in a single log event</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">put_metric</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">name</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
