@@ -5,10 +5,12 @@ use std::collections::BTreeMap;
 
 const DEFAULT_NAMEPSACE: &str = "aws-embedded-metrics";
 
-/// capture up to 100 metrics at a time
-// fn metric_scope<F,T>(f: F) -> T where F: FnMut<MetricLogger, T> {
-//     f(MetricLogger)
-// }
+/// Central api for logging acquiring metric logger
+///
+/// You can capture up to 100 metrics at a time
+pub fn metric_scope<T>(mut f: impl FnMut(&mut MetricLogger) -> T) -> T {
+    f(&mut MetricLogger::create())
+}
 
 #[derive(Serialize, Debug)]
 pub enum Unit {
@@ -138,6 +140,12 @@ pub struct MetricLogger {
     get_env: Box<dyn EnvironmentProvider>,
 }
 
+impl Drop for MetricLogger {
+    fn drop(&mut self) {
+        self.flush()
+    }
+}
+
 impl MetricLogger {
     pub fn create() -> MetricLogger {
         MetricLogger {
@@ -149,6 +157,7 @@ impl MetricLogger {
     pub fn flush(&mut self) {
         let _ = self.get_env.get();
         // todo: syncs
+        println!("metrics logger was flushed");
     }
 
     pub fn set_property(
@@ -179,6 +188,17 @@ impl MetricLogger {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn metric_scope_api() {
+        assert_eq!(
+            metric_scope(|metrics: &mut MetricLogger| {
+                metrics.put_metric("foo", 1, Unit::Count);
+                1
+            }),
+            1
+        )
+    }
 
     #[test]
     fn default_namepace() {
