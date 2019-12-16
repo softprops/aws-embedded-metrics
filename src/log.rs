@@ -166,7 +166,10 @@ mod tests {
             (Unit::CountPerSecond, "Count/Second"),
             (Unit::None, "None"),
         ] {
-            assert_eq!(serde_json::to_string(&unit).unwrap(), format!("\"{}\"", expected));
+            assert_eq!(
+                serde_json::to_string(&unit).unwrap(),
+                format!("\"{}\"", expected)
+            );
         }
     }
 }
