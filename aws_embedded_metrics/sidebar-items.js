@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Unit","Metric unit types"]],"fn":[["metric_scope","Central api for logging acquiring metric logger"]],"macro":[["dimensions","Create a BTreeMap from a list of key-value pairs"]],"struct":[["MetricLogger","Logging interface"]]});
