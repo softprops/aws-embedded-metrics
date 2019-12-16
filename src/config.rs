@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Deserialize, Default, PartialEq)]
+#[derive(Deserialize, Default, PartialEq, Debug)]
 pub struct Config {
     pub(crate) log_group_name: Option<String>,
     pub(crate) log_stream_name: Option<String>,
@@ -11,13 +11,22 @@ pub struct Config {
 }
 
 pub fn get() -> Config {
-    envy::prefixed("AWS_EMF").from_env().unwrap_or_default()
+    envy::prefixed("AWS_EMF_").from_env().unwrap_or_default()
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::env::set_var;
     #[test]
     fn it_deserializes_from_env() {
-        assert_eq!(2 + 2, 4);
+        set_var("AWS_EMF_SERVICE_NAME", "test");
+        assert_eq!(
+            get(),
+            Config {
+                service_name: Some("test".into()),
+                ..Config::default()
+            }
+        );
     }
 }
