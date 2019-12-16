@@ -111,7 +111,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
+    fn log_serializes_metrics() {
         let mut ctx = MetricContext::default();
         ctx.put_metric("foo", 1, Unit::Bytes);
         println!("{}", Log.serialize(ctx));

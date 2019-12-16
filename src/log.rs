@@ -1,8 +1,14 @@
+use crate::{Detector, EnvironmentProvider};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
 
 const DEFAULT_NAMEPSACE: &str = "aws-embedded-metrics";
+
+/// capture up to 100 metrics at a time
+// fn metric_scope<F,T>(f: F) -> T where F: FnMut<MetricLogger, T> {
+//     f(MetricLogger)
+// }
 
 #[derive(Serialize, Debug)]
 pub enum Unit {
@@ -124,6 +130,49 @@ impl Default for MetricContext {
             dimensions: Vec::new(),
             metrics: BTreeMap::default(),
         }
+    }
+}
+
+pub struct MetricLogger {
+    context: MetricContext,
+    get_env: Box<dyn EnvironmentProvider>,
+}
+
+impl MetricLogger {
+    pub fn create() -> MetricLogger {
+        MetricLogger {
+            context: MetricContext::default(),
+            get_env: Box::new(Detector::default()),
+        }
+    }
+
+    pub fn flush(&mut self) {
+        let _ = self.get_env.get();
+        // todo: syncs
+    }
+
+    pub fn set_property(
+        &mut self,
+        name: impl Into<String>,
+        value: impl Into<Value>,
+    ) {
+        self.context.set_property(name, value);
+    }
+
+    pub fn put_dimensions(
+        &mut self,
+        dims: BTreeMap<String, String>,
+    ) {
+        self.context.put_dimensions(dims);
+    }
+
+    pub fn put_metric(
+        &mut self,
+        name: impl Into<String>,
+        value: impl Into<f64>,
+        unit: Unit,
+    ) {
+        self.context.put_metric(name, value, unit);
     }
 }
 
