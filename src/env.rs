@@ -1,4 +1,4 @@
-use crate::MetricContext;
+use crate::{config::Config, log::MetricContext};
 use serde::Deserialize;
 use std::env::var;
 
@@ -15,7 +15,7 @@ impl Default for Detector {
     fn default() -> Detector {
         Detector {
             potentials: vec![Box::new(Lambda), Box::new(EC2::new())],
-            fallback: Box::new(Fallback),
+            fallback: Box::new(Fallback(crate::config::get())),
         }
     }
 }
@@ -42,7 +42,7 @@ pub trait Env {
     ) -> ();
 }
 
-pub struct Fallback;
+pub struct Fallback(Config);
 
 impl Env for Fallback {
     fn probe(&self) -> bool {
@@ -50,33 +50,30 @@ impl Env for Fallback {
     }
 
     fn name(&self) -> String {
-        "Unknown".into()
+        self.0
+            .service_name
+            .clone()
+            .unwrap_or_else(|| "Unknown".into())
     }
 
     fn env_type(&self) -> String {
-        "Unknown".into()
+        self.0
+            .service_type
+            .clone()
+            .unwrap_or_else(|| "Unknown".into())
     }
 
     fn log_group_name(&self) -> String {
-        format!("{}-metrics", self.name())
+        self.0
+            .log_group_name
+            .clone()
+            .unwrap_or_else(|| format!("{}-metrics", self.name()))
     }
 
     fn configure(
         &self,
-        context: &mut MetricContext,
+        _: &mut MetricContext,
     ) {
-        if let Ok(value) = var("AWS_EXECUTION_ENV") {
-            context.set_property("executionEnvironment", value);
-        }
-        if let Ok(value) = var("AWS_LAMBDA_FUNCTION_MEMORY_SIZE") {
-            context.set_property("memorySize", value);
-        }
-        if let Ok(value) = var("AWS_LAMBDA_FUNCTION_VERSION") {
-            context.set_property("functionVersion", value);
-        }
-        if let Ok(value) = var("AWS_LAMBDA_LOG_STREAM_NAME") {
-            context.set_property("logStreamId", value);
-        }
     }
 }
 
@@ -129,12 +126,16 @@ struct EC2MetadataResponse {
 }
 
 pub struct EC2 {
+    config: Config,
     metadata: Option<EC2MetadataResponse>,
 }
 
 impl EC2 {
     fn new() -> Self {
-        Self { metadata: None }
+        Self {
+            config: crate::config::get(),
+            metadata: None,
+        }
     }
 }
 
@@ -144,7 +145,10 @@ impl Env for EC2 {
     }
 
     fn name(&self) -> String {
-        "Unknown".into()
+        self.config
+            .service_name
+            .clone()
+            .unwrap_or_else(|| "Unknown".into())
     }
 
     fn env_type(&self) -> String {
@@ -156,7 +160,10 @@ impl Env for EC2 {
     }
 
     fn log_group_name(&self) -> String {
-        format!("{}-metrics", self.name())
+        self.config
+            .service_name
+            .clone()
+            .unwrap_or_else(|| format!("{}-metrics", self.name()))
     }
 
     fn configure(

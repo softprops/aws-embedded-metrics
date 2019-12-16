@@ -1,4 +1,4 @@
-use crate::{MetricContext, MetricValues, Unit};
+use crate::log::{MetricContext, MetricValues, Unit};
 use serde::Serialize as SerdeSerialize;
 use serde_json::Value;
 use std::collections::BTreeMap;

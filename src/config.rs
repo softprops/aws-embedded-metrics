@@ -2,12 +2,12 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Default, PartialEq)]
 pub struct Config {
-    log_group_name: Option<String>,
-    log_stream_name: Option<String>,
-    enable_debug_logging: Option<String>,
-    service_name: Option<String>,
-    service_type: Option<String>,
-    agent_endpoit: Option<String>,
+    pub(crate) log_group_name: Option<String>,
+    pub(crate) log_stream_name: Option<String>,
+    pub(crate) enable_debug_logging: Option<String>,
+    pub(crate) service_name: Option<String>,
+    pub(crate) service_type: Option<String>,
+    pub(crate) agent_endpoit: Option<String>,
 }
 
 pub fn get() -> Config {

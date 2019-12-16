@@ -1,4 +1,4 @@
-use crate::{Detector, EnvironmentProvider};
+use crate::env::{Detector, EnvironmentProvider};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -8,10 +8,24 @@ const DEFAULT_NAMEPSACE: &str = "aws-embedded-metrics";
 /// Central api for logging acquiring metric logger
 ///
 /// You can capture up to 100 metrics at a time
+///
+/// # example
+/// ```rust,edition2018
+/// use aws_embedded_metrics::{metric_scope, Unit, dimensions};
+///
+/// # fn main() {
+/// metric_scope(|mut metrics| {
+///    metrics.put_dimensions(dimensions! { "Service".into() => "Aggregator".into() });
+///    metrics.put_metric("ProcessingLatency", 100, Unit::Milliseconds);
+///    metrics.set_property("RequestId", "422b1569-16f6-4a03-b8f0-fe3fd9b100f8");
+/// });
+/// # }
+/// ```
 pub fn metric_scope<T>(mut f: impl FnMut(&mut MetricLogger) -> T) -> T {
     f(&mut MetricLogger::create())
 }
 
+/// Metric unit types
 #[derive(Serialize, Debug)]
 pub enum Unit {
     Seconds,
@@ -135,6 +149,7 @@ impl Default for MetricContext {
     }
 }
 
+/// Logging interface
 pub struct MetricLogger {
     context: MetricContext,
     get_env: Box<dyn EnvironmentProvider>,
@@ -158,6 +173,13 @@ impl MetricLogger {
         let _ = self.get_env.get();
         // todo: syncs
         println!("metrics logger was flushed");
+    }
+
+    pub fn set_namespace(
+        &mut self,
+        ns: impl Into<String>,
+    ) {
+        self.context.set_namespace(ns);
     }
 
     pub fn set_property(
