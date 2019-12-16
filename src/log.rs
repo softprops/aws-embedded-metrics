@@ -162,6 +162,7 @@ impl Drop for MetricLogger {
 }
 
 impl MetricLogger {
+    /// Create a new `MetricLogger` instance
     pub fn create() -> MetricLogger {
         MetricLogger {
             context: MetricContext::default(),
@@ -175,6 +176,7 @@ impl MetricLogger {
         println!("metrics logger was flushed");
     }
 
+    /// Override default metric namespace
     pub fn set_namespace(
         &mut self,
         ns: impl Into<String>,
@@ -182,6 +184,10 @@ impl MetricLogger {
         self.context.set_namespace(ns);
     }
 
+    /// Set a request property to the metric event
+    ///
+    /// This will be logged for querying in CloudWatch insights
+    /// but not part of a metric dimension in CloudWatch metrics
     pub fn set_property(
         &mut self,
         name: impl Into<String>,
@@ -190,6 +196,7 @@ impl MetricLogger {
         self.context.set_property(name, value);
     }
 
+    /// Config a set of metrics dimensions
     pub fn put_dimensions(
         &mut self,
         dims: BTreeMap<String, String>,
@@ -197,6 +204,9 @@ impl MetricLogger {
         self.context.put_dimensions(dims);
     }
 
+    /// Add a metric value to the metric event
+    ///
+    /// You can add up to 100 metrics in a single log event
     pub fn put_metric(
         &mut self,
         name: impl Into<String>,
