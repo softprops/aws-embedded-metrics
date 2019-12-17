@@ -7,7 +7,7 @@ pub struct Config {
     pub(crate) enable_debug_logging: Option<String>,
     pub(crate) service_name: Option<String>,
     pub(crate) service_type: Option<String>,
-    pub(crate) agent_endpoit: Option<String>,
+    pub(crate) agent_endpoint: Option<String>,
 }
 
 pub fn get() -> Config {
@@ -20,12 +20,25 @@ mod tests {
     use std::env::set_var;
     #[test]
     fn it_deserializes_from_env() {
-        set_var("AWS_EMF_SERVICE_NAME", "test");
+        for (key, value) in &[
+            ("LOG_GROUP_NAME", "a"),
+            ("LOG_STREAM_NAME", "b"),
+            ("ENABLE_DEBUG_LOGGING", "c"),
+            ("SERVICE_NAME", "d"),
+            ("SERVICE_TYPE", "e"),
+            ("AGENT_ENDPOINT", "f"),
+        ] {
+            set_var(format!("AWS_EMF_{}", key), value);
+        }
         assert_eq!(
             get(),
             Config {
-                service_name: Some("test".into()),
-                ..Config::default()
+                log_group_name: Some("a".into()),
+                log_stream_name: Some("b".into()),
+                enable_debug_logging: Some("c".into()),
+                service_name: Some("d".into()),
+                service_type: Some("e".into()),
+                agent_endpoint: Some("f".into())
             }
         );
     }
