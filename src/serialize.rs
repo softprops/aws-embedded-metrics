@@ -8,30 +8,30 @@ use std::collections::BTreeMap;
 const MAX_DIMENSIONS: usize = 9;
 
 #[derive(SerdeSerialize)]
-struct Metric {
-    name: String,
+struct Metric<'a> {
+    name: &'a str,
     unit: Unit,
 }
 
 #[derive(SerdeSerialize)]
-struct MetricDefinition {
-    namespace: String,
-    dimensions: Vec<Vec<String>>,
-    metrics: Vec<Metric>,
+struct MetricDefinition<'a> {
+    namespace: &'a str,
+    dimensions: Vec<Vec<&'a str>>,
+    metrics: Vec<Metric<'a>>,
 }
 
 #[derive(SerdeSerialize)]
-struct Metadata {
-    cloud_watch_metrics: Vec<MetricDefinition>,
+struct Metadata<'a> {
+    cloud_watch_metrics: Vec<MetricDefinition<'a>>,
     #[serde(flatten)]
-    meta: BTreeMap<String, Value>,
+    meta: BTreeMap<&'a str, Value>,
 }
 
 #[derive(SerdeSerialize)]
-struct Payload {
-    _aws: Metadata,
+struct Payload<'a> {
+    _aws: Metadata<'a>,
     #[serde(flatten)]
-    target_values: BTreeMap<String, Value>,
+    target_values: BTreeMap<&'a str, Value>,
 }
 
 pub trait Serialize {
@@ -51,54 +51,62 @@ impl Serialize for Log {
         let MetricContext {
             namespace,
             meta,
-            mut properties,
+            properties,
             dimensions,
             metrics,
         } = context;
 
-        let (dimensions, mut target_values) = dimensions.into_iter().fold(
+        let (dimensions, mut target_values) = dimensions.iter().fold(
             (Vec::new(), BTreeMap::new()),
             |(mut keys, mut dims), dim| {
                 dims.append(
                     &mut dim
                         .iter()
-                        .map(|(key, value)| (key.clone(), Value::from(value.clone())))
+                        .map(|(key, value)| (key.as_str(), Value::from(value.clone())))
                         .collect(),
                 );
                 keys.push(
                     dim.keys()
                         .take(MAX_DIMENSIONS)
-                        .cloned()
-                        .collect::<Vec<String>>(),
+                        .map(|s| s.as_str())
+                        .collect(),
                 );
                 (keys, dims)
             },
         );
-        target_values.append(&mut properties);
+        target_values.append(
+            &mut properties
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.to_owned()))
+                .collect(),
+        );
 
-        let payload = metrics.into_iter().fold(
+        let payload = metrics.iter().fold(
             Payload {
                 _aws: Metadata {
-                    meta,
+                    meta: meta
+                        .iter()
+                        .map(|(k, v)| (k.as_str(), v.to_owned()))
+                        .collect(),
                     cloud_watch_metrics: vec![MetricDefinition {
-                        namespace,
+                        namespace: namespace.as_str(),
                         dimensions,
                         metrics: Vec::new(),
                     }],
                 },
                 target_values,
             },
-            |mut payload, (name, metric)| {
+            move |mut payload, (name, metric)| {
                 let MetricValues { values, unit } = metric;
                 let val: Value = if values.len() == 1 {
                     values[0].into()
                 } else {
-                    values.into()
+                    values.to_owned().into()
                 };
-                payload.target_values.insert(name.clone(), val);
+                payload.target_values.insert(name, val);
                 payload._aws.cloud_watch_metrics[0]
                     .metrics
-                    .push(Metric { name, unit });
+                    .push(Metric { name, unit: *unit });
                 payload
             },
         );

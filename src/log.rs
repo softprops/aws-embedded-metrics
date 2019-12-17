@@ -26,7 +26,7 @@ pub fn metric_scope<T>(mut f: impl FnMut(&mut MetricLogger) -> T) -> T {
 }
 
 /// Metric unit types
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Copy, Clone)]
 pub enum Unit {
     Seconds,
     Microseconds,
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn unit_serializes() {
-        for (unit, expected) in vec![
+        for (unit, expected) in &[
             (Unit::Seconds, "Seconds"),
             (Unit::Microseconds, "Microseconds"),
             (Unit::Milliseconds, "Milliseconds"),
