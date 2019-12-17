@@ -50,7 +50,6 @@ impl Transport {
             Transport::Tcp(stream) => {
                 drop(stream.write_all(bytes).await);
             }
-            _ => (),
         }
     }
 }
@@ -63,15 +62,11 @@ enum Endpoint {
 
 impl Agent {
     fn parse(endpoint: impl AsRef<str>) -> Option<Endpoint> {
-        match endpoint.as_ref().parse::<Uri>().ok() {
-            Some(uri) => {
-                let (host, port) = (uri.host()?, uri.port()?.as_u16());
-                match uri.scheme()?.as_str() {
-                    "tcp" => Some(Endpoint::Tcp(host.into(), port)),
-                    "udp" => Some(Endpoint::Udp(host.into(), port)),
-                    _ => None,
-                }
-            }
+        let uri = endpoint.as_ref().parse::<Uri>().ok()?;
+        let (host, port) = (uri.host()?, uri.port()?.as_u16());
+        match uri.scheme()?.as_str() {
+            "tcp" => Some(Endpoint::Tcp(host.into(), port)),
+            "udp" => Some(Endpoint::Udp(host.into(), port)),
             _ => None,
         }
     }
