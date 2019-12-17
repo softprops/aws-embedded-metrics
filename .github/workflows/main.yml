@@ -60,7 +60,7 @@ jobs:
         export TRAVIS_PULL_REQUEST=false
         export TRAVIS_BRANCH=${GITHUB_REF##*/}
         cargo install cargo-tarpaulin
-        cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID --debug -v
+        cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
 
   publish-docs:
     runs-on: ubuntu-latest
