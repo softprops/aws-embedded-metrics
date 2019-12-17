@@ -2,11 +2,11 @@ use crate::{config::Config, log::MetricContext};
 use serde::Deserialize;
 use std::env::var;
 
-pub trait EnvironmentProvider {
+pub(crate) trait EnvironmentProvider {
     fn get(&mut self) -> &dyn Env;
 }
 
-pub struct Detector {
+pub(crate) struct Detector {
     potentials: Vec<Box<dyn Env>>,
     fallback: Box<dyn Env>,
 }
@@ -31,7 +31,7 @@ impl EnvironmentProvider for Detector {
     }
 }
 
-pub trait Env {
+pub(crate) trait Env {
     fn probe(&self) -> bool;
     fn name(&self) -> String;
     fn env_type(&self) -> String;
@@ -42,7 +42,7 @@ pub trait Env {
     ) -> ();
 }
 
-pub struct Fallback(Config);
+pub(crate) struct Fallback(Config);
 
 impl Env for Fallback {
     fn probe(&self) -> bool {
@@ -77,7 +77,7 @@ impl Env for Fallback {
     }
 }
 
-pub struct Lambda;
+pub(crate) struct Lambda;
 
 impl Env for Lambda {
     fn probe(&self) -> bool {
@@ -125,7 +125,7 @@ struct EC2MetadataResponse {
     instance_type: String,
 }
 
-pub struct EC2 {
+pub(crate) struct EC2 {
     config: Config,
     metadata: Option<EC2MetadataResponse>,
 }

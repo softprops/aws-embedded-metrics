@@ -10,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-pub trait Sink {
+pub(crate) trait Sink {
     fn accept(
         &mut self,
         context: MetricContext,

@@ -8,7 +8,9 @@
 //!
 //! # fn main() {
 //! metric_scope(|mut metrics| {
-//!    metrics.put_dimensions(dimensions! { "Service".into() => "Aggregator".into() });
+//!    metrics.put_dimensions(dimensions! {
+//! 		"Service".into() => "Aggregator".into()
+//! 	});
 //!    metrics.put_metric("ProcessingLatency", 100, Unit::Milliseconds);
 //!    metrics.set_property("RequestId", "422b1569-16f6-4a03-b8f0-fe3fd9b100f8");
 //! });

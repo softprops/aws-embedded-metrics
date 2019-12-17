@@ -34,14 +34,14 @@ struct Payload<'a> {
     target_values: BTreeMap<&'a str, Value>,
 }
 
-pub trait Serialize {
+pub(crate) trait Serialize {
     fn serialize(
         &self,
         context: MetricContext,
     ) -> String;
 }
 
-pub struct Log;
+pub(crate) struct Log;
 
 impl Serialize for Log {
     fn serialize(

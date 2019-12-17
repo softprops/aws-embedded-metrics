@@ -75,7 +75,7 @@ impl Default for Unit {
 }
 
 #[derive(Debug)]
-pub struct MetricValues {
+pub(crate) struct MetricValues {
     pub(crate) values: Vec<f64>,
     pub(crate) unit: Unit,
 }
@@ -90,7 +90,7 @@ impl MetricValues {
 }
 
 #[derive(Debug)]
-pub struct MetricContext {
+pub(crate) struct MetricContext {
     pub(crate) namespace: String,
     pub(crate) meta: BTreeMap<String, Value>,
     pub(crate) properties: BTreeMap<String, Value>,
@@ -165,20 +165,21 @@ impl Drop for MetricLogger {
 
 impl MetricLogger {
     /// Create a new `MetricLogger` instance
-    pub fn create() -> MetricLogger {
+    pub fn new() -> MetricLogger {
         MetricLogger {
             context: MetricContext::default(),
             get_env: Box::new(Detector::default()),
         }
     }
 
+    /// Flushes the current context state to the configured sink.
     pub fn flush(&mut self) {
         let _ = self.get_env.get();
         // todo: syncs
         println!("metrics logger was flushed");
     }
 
-    /// Override default metric namespace
+    /// Set the CloudWatch namespace that metrics should be published to.
     pub fn set_namespace(
         &mut self,
         ns: impl Into<String>,
@@ -186,10 +187,12 @@ impl MetricLogger {
         self.context.set_namespace(ns);
     }
 
-    /// Set a request property to the metric event
-    ///
-    /// This will be logged for querying in CloudWatch insights
-    /// but not part of a metric dimension in CloudWatch metrics
+    /// Set a property on the published metrics.
+    /// This is stored in the emitted log data and you are not
+    /// charged for this data by CloudWatch Metrics.
+    /// These values can be values that are useful for searching on,
+    /// but have too high cardinality to emit as dimensions to
+    /// CloudWatch Metrics.
     pub fn set_property(
         &mut self,
         name: impl Into<String>,
@@ -198,7 +201,11 @@ impl MetricLogger {
         self.context.set_property(name, value);
     }
 
-    /// Config a set of metrics dimensions
+    /// Adds a dimension.
+    /// This is generally a low cardinality key-value pair that is part of the metric identity.
+    /// CloudWatch treats each unique combination of dimensions as a separate metric, even if the metrics have the same metric name.
+    ///
+    /// See [CloudWatch Dimensions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Dimension) for more information
     pub fn put_dimensions(
         &mut self,
         dims: BTreeMap<String, String>,
@@ -206,9 +213,9 @@ impl MetricLogger {
         self.context.put_dimensions(dims);
     }
 
-    /// Add a metric value to the metric event
-    ///
-    /// You can add up to 100 metrics in a single log event
+    /// Put a metric value.
+    /// This value will be emitted to CloudWatch Metrics asyncronously and does not contribute to your
+    /// account TPS limits. The value will also be available in your CloudWatch Logs
     pub fn put_metric(
         &mut self,
         name: impl Into<String>,
