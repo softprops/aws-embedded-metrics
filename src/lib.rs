@@ -19,4 +19,5 @@ pub use log::{metric_scope, MetricLogger, Unit};
 mod config;
 mod env;
 mod serialize;
+mod sink;
 pub use maplit::btreemap as dimensions;
