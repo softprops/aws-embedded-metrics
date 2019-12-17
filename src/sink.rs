@@ -2,9 +2,12 @@
 //! data to an external system
 use crate::{log::MetricContext, serialize::Serialize};
 use hyper::Uri;
-use tokio::{
-    io::AsyncWriteExt,
+use std::{
+    convert::{TryFrom, TryInto},
+    error::Error as StdError,
+    io::{self, Write},
     net::{TcpStream, UdpSocket},
+    time::Duration,
 };
 
 pub trait Sink {
@@ -38,17 +41,37 @@ enum Transport {
 }
 
 impl Transport {
-    async fn send(
+    fn send(
         &mut self,
         bytes: &[u8],
     ) {
         // todo: communicate errs
         match self {
             Transport::Udp(stream) => {
-                drop(stream.send(bytes).await);
+                drop(stream.send(bytes));
             }
             Transport::Tcp(stream) => {
-                drop(stream.write_all(bytes).await);
+                drop(stream.write_all(bytes));
+            }
+        }
+    }
+}
+
+impl TryFrom<Endpoint> for Transport {
+    type Error = io::Error;
+    fn try_from(ep: Endpoint) -> Result<Transport, Self::Error> {
+        match ep {
+            Endpoint::Tcp(host, port) => {
+                let tcp = TcpStream::connect((host.as_str(), port))?;
+                tcp.set_nonblocking(true)?;
+                tcp.set_write_timeout(Some(Duration::from_secs(1)))?;
+                Ok(Transport::Tcp(tcp))
+            }
+            Endpoint::Udp(host, port) => {
+                let udp = UdpSocket::bind((host.as_str(), port))?;
+                udp.set_nonblocking(true)?;
+                udp.set_write_timeout(Some(Duration::from_secs(1)))?;
+                Ok(Transport::Udp(udp))
             }
         }
     }
@@ -71,21 +94,16 @@ impl Agent {
         }
     }
 
-    pub async fn create(
+    pub(crate) fn create(
         log_group_name: String,
         log_stream_name: Option<String>,
         config_endpoint: Option<String>,
         serializer: impl Serialize + 'static,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let transport = match config_endpoint.and_then(Self::parse) {
-            Some(Endpoint::Tcp(host, port)) => {
-                Transport::Tcp(TcpStream::connect((host.as_str(), port)).await?)
-            }
-            Some(Endpoint::Udp(host, port)) => {
-                Transport::Udp(UdpSocket::bind((host.as_str(), port)).await?)
-            }
-            _ => Transport::Tcp(TcpStream::connect("0.0.0.0:25888").await?),
-        };
+    ) -> Result<Self, Box<dyn StdError>> {
+        let transport = config_endpoint
+            .and_then(Self::parse)
+            .unwrap_or_else(|| Endpoint::Tcp("0.0.0.0".into(), 25888))
+            .try_into()?;
         Ok(Self {
             log_group_name,
             log_stream_name,
