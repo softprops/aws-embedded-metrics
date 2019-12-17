@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::env::vars;
 
 #[derive(Deserialize, Default, PartialEq, Debug)]
 pub struct Config {
@@ -11,13 +12,25 @@ pub struct Config {
 }
 
 pub fn get() -> Config {
-    envy::prefixed("AWS_EMF_").from_env().unwrap_or_default()
+    from_vars(vars())
+}
+
+fn from_vars(vars: impl IntoIterator<Item = (String, String)>) -> Config {
+    envy::prefixed("AWS_EMF_")
+        .from_iter(vars)
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::env::set_var;
+
+    #[test]
+    fn it_defaults_when_no_data_is_provided() {
+        assert_eq!(from_vars(Vec::new()), Config::default())
+    }
+
     #[test]
     fn it_deserializes_from_env() {
         for (key, value) in &[
