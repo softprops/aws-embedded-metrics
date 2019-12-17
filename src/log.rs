@@ -1,7 +1,7 @@
 use crate::env::{Detector, EnvironmentProvider};
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::UNIX_EPOCH};
 
 const DEFAULT_NAMEPSACE: &str = "aws-embedded-metrics";
 
@@ -141,7 +141,9 @@ impl Default for MetricContext {
     fn default() -> MetricContext {
         MetricContext {
             namespace: DEFAULT_NAMEPSACE.into(),
-            meta: BTreeMap::default(),
+            meta: ::maplit::btreemap!(
+                "Timestamp".into() => (UNIX_EPOCH.elapsed().unwrap_or_default().as_millis() as u64).into()
+            ),
             properties: BTreeMap::default(),
             dimensions: Vec::new(),
             metrics: BTreeMap::default(),
