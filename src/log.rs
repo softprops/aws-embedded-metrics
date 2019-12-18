@@ -22,7 +22,7 @@ const DEFAULT_NAMEPSACE: &str = "aws-embedded-metrics";
 /// # }
 /// ```
 pub fn metric_scope<T>(mut f: impl FnMut(&mut MetricLogger) -> T) -> T {
-    f(&mut MetricLogger::create())
+    f(&mut MetricLogger::default())
 }
 
 /// Metric unit types
@@ -163,15 +163,16 @@ impl Drop for MetricLogger {
     }
 }
 
-impl MetricLogger {
-    /// Create a new `MetricLogger` instance
-    pub fn new() -> MetricLogger {
+impl Default for MetricLogger {
+    fn default() -> MetricLogger {
         MetricLogger {
             context: MetricContext::default(),
             get_env: Box::new(Detector::default()),
         }
     }
+}
 
+impl MetricLogger {
     /// Flushes the current context state to the configured sink.
     pub fn flush(&mut self) {
         let _ = self.get_env.get();
