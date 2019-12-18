@@ -32,6 +32,4 @@
 <br />
 
 
-# aws embedded metrics [![GitHub Actions](https://github.com/softprops/aws-embedded-metrics/workflows/Main/badge.svg)](https://github.com/softprops/aws-embedded-metrics/actions) [![Coverage Status](https://coveralls.io/repos/github/softprops/aws-embedded-metrics/badge.svg?branch=master)](https://coveralls.io/github/softprops/aws-embedded-metrics?branch=master)
-
 Doug Tangren (softprops) 2019

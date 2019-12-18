@@ -16,7 +16,7 @@ const DEFAULT_NAMEPSACE: &str = "aws-embedded-metrics";
 /// # fn main() {
 /// metric_scope(|mut metrics| {
 ///    metrics.put_dimensions(dimensions! {
-///         "Service".into() => "Aggregator".into()
+///         "Service" => "Aggregator"
 ///    });
 ///    metrics.put_metric("ProcessingLatency", 100, Unit::Milliseconds);
 ///    metrics.set_property("RequestId", "422b1569-16f6-4a03-b8f0-fe3fd9b100f8");
@@ -92,7 +92,7 @@ impl MetricValues {
 }
 
 #[derive(Debug)]
-pub(crate) struct MetricContext {
+pub struct MetricContext {
     pub(crate) namespace: String,
     pub(crate) meta: BTreeMap<String, Value>,
     pub(crate) properties: BTreeMap<String, Value>,
@@ -103,9 +103,9 @@ pub(crate) struct MetricContext {
 impl MetricContext {
     pub fn set_namespace(
         &mut self,
-        ns: impl Into<String>,
+        namespace: impl Into<String>,
     ) {
-        self.namespace = ns.into()
+        self.namespace = namespace.into()
     }
 
     pub fn set_property(
@@ -118,9 +118,13 @@ impl MetricContext {
 
     pub fn put_dimensions(
         &mut self,
-        dims: BTreeMap<String, String>,
+        dims: BTreeMap<impl Into<String>, impl Into<String>>,
     ) {
-        self.dimensions.push(dims);
+        self.dimensions.push(
+            dims.into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+        );
     }
 
     pub fn put_metric(
@@ -153,7 +157,10 @@ impl Default for MetricContext {
     }
 }
 
-/// Logging interface
+/// Metric logging interface
+///
+/// By default, metrics will live under a default namespace "aws-embedded-metrics",
+/// You may customize this for your application with the `set_namespace` function
 pub struct MetricLogger {
     context: MetricContext,
     get_env: Box<dyn EnvironmentProvider>,
@@ -176,6 +183,8 @@ impl Default for MetricLogger {
 
 impl MetricLogger {
     /// Flushes the current context state to the configured sink.
+    ///
+    /// Then `MetricLogger` values are dropped, `flush` is called for you
     pub fn flush(&mut self) {
         let _ = self.get_env.get();
         // todo: syncs
@@ -211,7 +220,7 @@ impl MetricLogger {
     /// See [CloudWatch Dimensions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Dimension) for more information
     pub fn put_dimensions(
         &mut self,
-        dims: BTreeMap<String, String>,
+        dims: BTreeMap<impl Into<String>, impl Into<String>>,
     ) {
         self.context.put_dimensions(dims);
     }
@@ -219,6 +228,11 @@ impl MetricLogger {
     /// Put a metric value.
     /// This value will be emitted to CloudWatch Metrics asyncronously and does not contribute to your
     /// account TPS limits. The value will also be available in your CloudWatch Logs
+    ///
+    /// Although the Value parameter accepts floating point numbers,
+    /// CloudWatch rejects values that are either too small or too large.
+    /// Values must be in the range of -2^360 to 2^360.
+    /// In addition, special values (for example, NaN, +Infinity, -Infinity) are not supported.
     pub fn put_metric(
         &mut self,
         name: impl Into<String>,

@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 
 // https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html?shortFooter=true
 
+/// Each dimension set is capped at maximum of 9 dimension names
 const MAX_DIMENSIONS: usize = 9;
 
 #[derive(SerdeSerialize)]
@@ -25,7 +26,7 @@ struct MetricDefinition<'a> {
 #[derive(SerdeSerialize)]
 #[serde(rename_all = "PascalCase")]
 struct Metadata<'a> {
-    cloud_watch_metrics: Vec<MetricDefinition<'a>>,
+    cloud_watch_metrics: [MetricDefinition<'a>; 1],
     #[serde(flatten)]
     meta: BTreeMap<&'a str, Value>,
 }
@@ -37,14 +38,14 @@ struct Payload<'a> {
     target_values: BTreeMap<&'a str, Value>,
 }
 
-pub(crate) trait Serialize {
+pub trait Serialize {
     fn serialize(
         &self,
         context: MetricContext,
     ) -> String;
 }
 
-pub(crate) struct Log;
+pub struct Log;
 
 impl Serialize for Log {
     fn serialize(
@@ -62,16 +63,16 @@ impl Serialize for Log {
         let (dimensions, mut target_values) = dimensions.iter().fold(
             (Vec::new(), BTreeMap::new()),
             |(mut keys, mut dims), dim| {
-                dims.append(
-                    &mut dim
-                        .iter()
-                        .map(|(key, value)| (key.as_str(), Value::from(value.clone())))
-                        .collect(),
-                );
                 keys.push(
                     dim.keys()
                         .take(MAX_DIMENSIONS)
                         .map(|s| s.as_str())
+                        .collect(),
+                );
+                dims.append(
+                    &mut dim
+                        .iter()
+                        .map(|(key, value)| (key.as_str(), Value::from(value.clone())))
                         .collect(),
                 );
                 (keys, dims)
@@ -91,7 +92,7 @@ impl Serialize for Log {
                         .iter()
                         .map(|(k, v)| (k.as_str(), v.to_owned()))
                         .collect(),
-                    cloud_watch_metrics: vec![MetricDefinition {
+                    cloud_watch_metrics: [MetricDefinition {
                         namespace: namespace.as_str(),
                         dimensions,
                         metrics: Vec::with_capacity(metrics.len()),
@@ -101,6 +102,7 @@ impl Serialize for Log {
             },
             move |mut payload, (name, metric)| {
                 let MetricValues { values, unit } = metric;
+                // if there is only one metric value, unwrap it to make querying easier
                 let val: Value = if values.len() == 1 {
                     values[0].into()
                 } else {

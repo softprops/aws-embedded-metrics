@@ -9,17 +9,20 @@
 //! # fn main() {
 //! metric_scope(|mut metrics| {
 //!    metrics.put_dimensions(dimensions! {
-//! 		"Service".into() => "Aggregator".into()
+//! 		"Service" => "Aggregator"
 //! 	});
 //!    metrics.put_metric("ProcessingLatency", 100, Unit::Milliseconds);
 //!    metrics.set_property("RequestId", "422b1569-16f6-4a03-b8f0-fe3fd9b100f8");
 //! });
 //! # }
-//! ```
-mod log;
+// only pub for benches
+#[doc(hidden)]
+pub mod log;
 pub use log::{metric_scope, MetricLogger, Unit};
 mod config;
 mod env;
-mod serialize;
+// only pub for benches
+#[doc(hidden)]
+pub mod serialize;
 mod sink;
 pub use maplit::btreemap as dimensions;
