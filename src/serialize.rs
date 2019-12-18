@@ -8,12 +8,14 @@ use std::collections::BTreeMap;
 const MAX_DIMENSIONS: usize = 9;
 
 #[derive(SerdeSerialize)]
+#[serde(rename_all = "PascalCase")]
 struct Metric<'a> {
     name: &'a str,
     unit: Unit,
 }
 
 #[derive(SerdeSerialize)]
+#[serde(rename_all = "PascalCase")]
 struct MetricDefinition<'a> {
     namespace: &'a str,
     dimensions: Vec<Vec<&'a str>>,
@@ -21,6 +23,7 @@ struct MetricDefinition<'a> {
 }
 
 #[derive(SerdeSerialize)]
+#[serde(rename_all = "PascalCase")]
 struct Metadata<'a> {
     cloud_watch_metrics: Vec<MetricDefinition<'a>>,
     #[serde(flatten)]
@@ -91,7 +94,7 @@ impl Serialize for Log {
                     cloud_watch_metrics: vec![MetricDefinition {
                         namespace: namespace.as_str(),
                         dimensions,
-                        metrics: Vec::new(),
+                        metrics: Vec::with_capacity(metrics.len()),
                     }],
                 },
                 target_values,
@@ -117,11 +120,33 @@ impl Serialize for Log {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jsonschema_valid::validate;
+    use std::error::Error as StdError;
 
     #[test]
     fn log_serializes_metrics() {
         let mut ctx = MetricContext::default();
         ctx.put_metric("foo", 1, Unit::Bytes);
         println!("{}", Log.serialize(ctx));
+    }
+
+    #[test]
+    fn log_serializes_valid_payload() -> Result<(), Box<dyn StdError>> {
+        let mut ctx = MetricContext::default();
+        ctx.put_metric("foo", 1, Unit::Bytes);
+        let payload = Log.serialize(ctx);
+        let result = validate(
+            &serde_json::from_str(&payload)?,
+            &serde_json::from_str(include_str!("../data/schema.json"))?,
+            None,
+            false,
+        );
+        assert!(
+            result.get_errors().is_empty(),
+            "payload contained validation errors\n\n{}\n\n{:?}",
+            payload,
+            result.get_errors()
+        );
+        Ok(())
     }
 }
