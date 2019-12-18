@@ -284,6 +284,8 @@
 <span id="284">284</span>
 <span id="285">285</span>
 <span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">env</span>::{<span class="ident">Detector</span>, <span class="ident">EnvironmentProvider</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
@@ -302,7 +304,9 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// # fn main() {</span>
 <span class="doccomment">/// metric_scope(|mut metrics| {</span>
-<span class="doccomment">///    metrics.put_dimensions(dimensions! { &quot;Service&quot;.into() =&gt; &quot;Aggregator&quot;.into() });</span>
+<span class="doccomment">///    metrics.put_dimensions(dimensions! {</span>
+<span class="doccomment">///         &quot;Service&quot;.into() =&gt; &quot;Aggregator&quot;.into()</span>
+<span class="doccomment">///    });</span>
 <span class="doccomment">///    metrics.put_metric(&quot;ProcessingLatency&quot;, 100, Unit::Milliseconds);</span>
 <span class="doccomment">///    metrics.set_property(&quot;RequestId&quot;, &quot;422b1569-16f6-4a03-b8f0-fe3fd9b100f8&quot;);</span>
 <span class="doccomment">/// });</span>
