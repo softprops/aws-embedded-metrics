@@ -9,8 +9,8 @@
 //! # fn main() {
 //! metric_scope(|mut metrics| {
 //!    metrics.put_dimensions(dimensions! {
-//! 		"Service" => "Aggregator"
-//! 	});
+//!        "Service" => "Aggregator"
+//!    });
 //!    metrics.put_metric("ProcessingLatency", 100, Unit::Milliseconds);
 //!    metrics.set_property("RequestId", "422b1569-16f6-4a03-b8f0-fe3fd9b100f8");
 //! });
@@ -25,4 +25,20 @@ mod env;
 #[doc(hidden)]
 pub mod serialize;
 mod sink;
-pub use maplit::btreemap as dimensions;
+
+#[macro_export]
+macro_rules! dimensions {
+    (@single $($x:tt)*) => (());
+    (@count $($rest:expr),*) => (<[()]>::len(&[$(dimensions!(@single $rest)),*]));
+    ($($key:expr => $value:expr,)+) => { dimentions!($($key => $value),+) };
+    ($($key:expr => $value:expr),*) => {
+        {
+            let _cap = dimensions!(@count $($key),*);
+            let mut _map = ::std::collections::HashMap::with_capacity(_cap);
+            $(
+                let _ = _map.insert($key.into(), $value.into());
+            )*
+            _map
+        }
+    };
+}

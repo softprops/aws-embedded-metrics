@@ -1,7 +1,10 @@
-use crate::env::{Detector, EnvironmentProvider};
+use crate::{
+    dimensions,
+    env::{Detector, EnvironmentProvider},
+};
 use serde::Serialize;
 use serde_json::Value;
-use std::{collections::BTreeMap, time::UNIX_EPOCH};
+use std::{collections::HashMap, time::UNIX_EPOCH};
 
 const DEFAULT_NAMEPSACE: &str = "aws-embedded-metrics";
 
@@ -94,10 +97,10 @@ impl MetricValues {
 #[derive(Debug)]
 pub struct MetricContext {
     pub(crate) namespace: String,
-    pub(crate) meta: BTreeMap<String, Value>,
-    pub(crate) properties: BTreeMap<String, Value>,
-    pub(crate) dimensions: Vec<BTreeMap<String, String>>,
-    pub(crate) metrics: BTreeMap<String, MetricValues>,
+    pub(crate) meta: HashMap<String, Value>,
+    pub(crate) properties: HashMap<String, Value>,
+    pub(crate) dimensions: Vec<HashMap<String, String>>,
+    pub(crate) metrics: HashMap<String, MetricValues>,
 }
 
 impl MetricContext {
@@ -118,13 +121,9 @@ impl MetricContext {
 
     pub fn put_dimensions(
         &mut self,
-        dims: BTreeMap<impl Into<String>, impl Into<String>>,
+        dims: HashMap<String, String>,
     ) {
-        self.dimensions.push(
-            dims.into_iter()
-                .map(|(k, v)| (k.into(), v.into()))
-                .collect(),
-        );
+        self.dimensions.push(dims);
     }
 
     pub fn put_metric(
@@ -147,12 +146,12 @@ impl Default for MetricContext {
     fn default() -> MetricContext {
         MetricContext {
             namespace: DEFAULT_NAMEPSACE.into(),
-            meta: ::maplit::btreemap!(
-                "Timestamp".into() => (UNIX_EPOCH.elapsed().unwrap_or_default().as_millis() as u64).into()
+            meta: dimensions!(
+                "Timestamp" => UNIX_EPOCH.elapsed().unwrap_or_default().as_millis() as u64
             ),
-            properties: BTreeMap::default(),
+            properties: HashMap::default(),
             dimensions: Vec::new(),
-            metrics: BTreeMap::default(),
+            metrics: HashMap::default(),
         }
     }
 }
@@ -199,12 +198,13 @@ impl MetricLogger {
         self.context.set_namespace(ns);
     }
 
-    /// Set a property on the published metrics.
+    /// Set an aribtrary property on the published metrics.
     /// This is stored in the emitted log data and you are not
     /// charged for this data by CloudWatch Metrics.
+    ///
     /// These values can be values that are useful for searching on,
     /// but have too high cardinality to emit as dimensions to
-    /// CloudWatch Metrics.
+    /// CloudWatch Metrics. An example would be a request id
     pub fn set_property(
         &mut self,
         name: impl Into<String>,
@@ -220,7 +220,7 @@ impl MetricLogger {
     /// See [CloudWatch Dimensions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Dimension) for more information
     pub fn put_dimensions(
         &mut self,
-        dims: BTreeMap<impl Into<String>, impl Into<String>>,
+        dims: HashMap<String, String>,
     ) {
         self.context.put_dimensions(dims);
     }
