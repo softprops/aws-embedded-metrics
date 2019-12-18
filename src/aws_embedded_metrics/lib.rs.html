@@ -21,6 +21,8 @@
 <span id="21">21</span>
 <span id="22">22</span>
 <span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Provides an interface for recording high cardinality application metrics</span>
 <span class="doccomment">//! using AWS CloudWatch embedded metrics</span>
@@ -32,7 +34,9 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # fn main() {</span>
 <span class="doccomment">//! metric_scope(|mut metrics| {</span>
-<span class="doccomment">//!    metrics.put_dimensions(dimensions! { &quot;Service&quot;.into() =&gt; &quot;Aggregator&quot;.into() });</span>
+<span class="doccomment">//!    metrics.put_dimensions(dimensions! {</span>
+<span class="doccomment">//! 		&quot;Service&quot;.into() =&gt; &quot;Aggregator&quot;.into()</span>
+<span class="doccomment">//! 	});</span>
 <span class="doccomment">//!    metrics.put_metric(&quot;ProcessingLatency&quot;, 100, Unit::Milliseconds);</span>
 <span class="doccomment">//!    metrics.set_property(&quot;RequestId&quot;, &quot;422b1569-16f6-4a03-b8f0-fe3fd9b100f8&quot;);</span>
 <span class="doccomment">//! });</span>
