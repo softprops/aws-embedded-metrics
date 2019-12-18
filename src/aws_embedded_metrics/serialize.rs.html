@@ -150,6 +150,8 @@
 <span id="150">150</span>
 <span id="151">151</span>
 <span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">log</span>::{<span class="ident">MetricContext</span>, <span class="ident">MetricValues</span>, <span class="ident">Unit</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span> <span class="kw">as</span> <span class="ident">SerdeSerialize</span>;
@@ -158,6 +160,7 @@
 
 <span class="comment">// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html?shortFooter=true</span>
 
+<span class="doccomment">/// Each dimension set is capped at maximum of 9 dimension names</span>
 <span class="kw">const</span> <span class="ident">MAX_DIMENSIONS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">9</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">SerdeSerialize</span>)]</span>
@@ -178,7 +181,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">SerdeSerialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;PascalCase&quot;</span>)]</span>
 <span class="kw">struct</span> <span class="ident">Metadata</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">cloud_watch_metrics</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MetricDefinition</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">cloud_watch_metrics</span>: [<span class="ident">MetricDefinition</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>; <span class="number">1</span>],
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">flatten</span>)]</span>
     <span class="ident">meta</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>, <span class="ident">Value</span><span class="op">&gt;</span>,
 }
@@ -190,14 +193,14 @@
     <span class="ident">target_values</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>, <span class="ident">Value</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait</span> <span class="ident">Serialize</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Serialize</span> {
     <span class="kw">fn</span> <span class="ident">serialize</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">context</span>: <span class="ident">MetricContext</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span>;
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Log</span>;
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Log</span>;
 
 <span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">Log</span> {
     <span class="kw">fn</span> <span class="ident">serialize</span>(
@@ -215,16 +218,16 @@
         <span class="kw">let</span> (<span class="ident">dimensions</span>, <span class="kw-2">mut</span> <span class="ident">target_values</span>) <span class="op">=</span> <span class="ident">dimensions</span>.<span class="ident">iter</span>().<span class="ident">fold</span>(
             (<span class="ident">Vec</span>::<span class="ident">new</span>(), <span class="ident">BTreeMap</span>::<span class="ident">new</span>()),
             <span class="op">|</span>(<span class="kw-2">mut</span> <span class="ident">keys</span>, <span class="kw-2">mut</span> <span class="ident">dims</span>), <span class="ident">dim</span><span class="op">|</span> {
-                <span class="ident">dims</span>.<span class="ident">append</span>(
-                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dim</span>
-                        .<span class="ident">iter</span>()
-                        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">key</span>, <span class="ident">value</span>)<span class="op">|</span> (<span class="ident">key</span>.<span class="ident">as_str</span>(), <span class="ident">Value</span>::<span class="ident">from</span>(<span class="ident">value</span>.<span class="ident">clone</span>())))
-                        .<span class="ident">collect</span>(),
-                );
                 <span class="ident">keys</span>.<span class="ident">push</span>(
                     <span class="ident">dim</span>.<span class="ident">keys</span>()
                         .<span class="ident">take</span>(<span class="ident">MAX_DIMENSIONS</span>)
                         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_str</span>())
+                        .<span class="ident">collect</span>(),
+                );
+                <span class="ident">dims</span>.<span class="ident">append</span>(
+                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dim</span>
+                        .<span class="ident">iter</span>()
+                        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">key</span>, <span class="ident">value</span>)<span class="op">|</span> (<span class="ident">key</span>.<span class="ident">as_str</span>(), <span class="ident">Value</span>::<span class="ident">from</span>(<span class="ident">value</span>.<span class="ident">clone</span>())))
                         .<span class="ident">collect</span>(),
                 );
                 (<span class="ident">keys</span>, <span class="ident">dims</span>)
@@ -244,7 +247,7 @@
                         .<span class="ident">iter</span>()
                         .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">k</span>, <span class="ident">v</span>)<span class="op">|</span> (<span class="ident">k</span>.<span class="ident">as_str</span>(), <span class="ident">v</span>.<span class="ident">to_owned</span>()))
                         .<span class="ident">collect</span>(),
-                    <span class="ident">cloud_watch_metrics</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">MetricDefinition</span> {
+                    <span class="ident">cloud_watch_metrics</span>: [<span class="ident">MetricDefinition</span> {
                         <span class="ident">namespace</span>: <span class="ident">namespace</span>.<span class="ident">as_str</span>(),
                         <span class="ident">dimensions</span>,
                         <span class="ident">metrics</span>: <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">metrics</span>.<span class="ident">len</span>()),
@@ -254,6 +257,7 @@
             },
             <span class="kw">move</span> <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">payload</span>, (<span class="ident">name</span>, <span class="ident">metric</span>)<span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">MetricValues</span> { <span class="ident">values</span>, <span class="ident">unit</span> } <span class="op">=</span> <span class="ident">metric</span>;
+                <span class="comment">// if there is only one metric value, unwrap it to make querying easier</span>
                 <span class="kw">let</span> <span class="ident">val</span>: <span class="ident">Value</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">values</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">1</span> {
                     <span class="ident">values</span>[<span class="number">0</span>].<span class="ident">into</span>()
                 } <span class="kw">else</span> {

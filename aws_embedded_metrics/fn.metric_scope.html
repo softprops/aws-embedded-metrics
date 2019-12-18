@@ -6,7 +6,7 @@
 
 <span class="ident">metric_scope</span>(<span class="op">|</span><span class="kw-2">mut</span> <span class="ident">metrics</span><span class="op">|</span> {
    <span class="ident">metrics</span>.<span class="ident">put_dimensions</span>(<span class="macro">dimensions</span><span class="macro">!</span> {
-        <span class="string">&quot;Service&quot;</span>.<span class="ident">into</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;Aggregator&quot;</span>.<span class="ident">into</span>()
+        <span class="string">&quot;Service&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;Aggregator&quot;</span>
    });
    <span class="ident">metrics</span>.<span class="ident">put_metric</span>(<span class="string">&quot;ProcessingLatency&quot;</span>, <span class="number">100</span>, <span class="ident">Unit</span>::<span class="ident">Milliseconds</span>);
    <span class="ident">metrics</span>.<span class="ident">set_property</span>(<span class="string">&quot;RequestId&quot;</span>, <span class="string">&quot;422b1569-16f6-4a03-b8f0-fe3fd9b100f8&quot;</span>);

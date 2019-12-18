@@ -286,6 +286,20 @@
 <span id="286">286</span>
 <span id="287">287</span>
 <span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">env</span>::{<span class="ident">Detector</span>, <span class="ident">EnvironmentProvider</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
@@ -305,7 +319,7 @@
 <span class="doccomment">/// # fn main() {</span>
 <span class="doccomment">/// metric_scope(|mut metrics| {</span>
 <span class="doccomment">///    metrics.put_dimensions(dimensions! {</span>
-<span class="doccomment">///         &quot;Service&quot;.into() =&gt; &quot;Aggregator&quot;.into()</span>
+<span class="doccomment">///         &quot;Service&quot; =&gt; &quot;Aggregator&quot;</span>
 <span class="doccomment">///    });</span>
 <span class="doccomment">///    metrics.put_metric(&quot;ProcessingLatency&quot;, 100, Unit::Milliseconds);</span>
 <span class="doccomment">///    metrics.set_property(&quot;RequestId&quot;, &quot;422b1569-16f6-4a03-b8f0-fe3fd9b100f8&quot;);</span>
@@ -381,7 +395,7 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">MetricContext</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MetricContext</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">namespace</span>: <span class="ident">String</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">meta</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Value</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">properties</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Value</span><span class="op">&gt;</span>,
@@ -392,9 +406,9 @@
 <span class="kw">impl</span> <span class="ident">MetricContext</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_namespace</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">ns</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">namespace</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     ) {
-        <span class="self">self</span>.<span class="ident">namespace</span> <span class="op">=</span> <span class="ident">ns</span>.<span class="ident">into</span>()
+        <span class="self">self</span>.<span class="ident">namespace</span> <span class="op">=</span> <span class="ident">namespace</span>.<span class="ident">into</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_property</span>(
@@ -407,9 +421,13 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">put_dimensions</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">dims</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">dims</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) {
-        <span class="self">self</span>.<span class="ident">dimensions</span>.<span class="ident">push</span>(<span class="ident">dims</span>);
+        <span class="self">self</span>.<span class="ident">dimensions</span>.<span class="ident">push</span>(
+            <span class="ident">dims</span>.<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">k</span>, <span class="ident">v</span>)<span class="op">|</span> (<span class="ident">k</span>.<span class="ident">into</span>(), <span class="ident">v</span>.<span class="ident">into</span>()))
+                .<span class="ident">collect</span>(),
+        );
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">put_metric</span>(
@@ -442,7 +460,10 @@
     }
 }
 
-<span class="doccomment">/// Logging interface</span>
+<span class="doccomment">/// Metric logging interface</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// By default, metrics will live under a default namespace &quot;aws-embedded-metrics&quot;,</span>
+<span class="doccomment">/// You may customize this for your application with the `set_namespace` function</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MetricLogger</span> {
     <span class="ident">context</span>: <span class="ident">MetricContext</span>,
     <span class="ident">get_env</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">EnvironmentProvider</span><span class="op">&gt;</span>,
@@ -465,6 +486,8 @@
 
 <span class="kw">impl</span> <span class="ident">MetricLogger</span> {
     <span class="doccomment">/// Flushes the current context state to the configured sink.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Then `MetricLogger` values are dropped, `flush` is called for you</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flush</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_env</span>.<span class="ident">get</span>();
         <span class="comment">// todo: syncs</span>
@@ -500,7 +523,7 @@
     <span class="doccomment">/// See [CloudWatch Dimensions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Dimension) for more information</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">put_dimensions</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">dims</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">dims</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) {
         <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">put_dimensions</span>(<span class="ident">dims</span>);
     }
@@ -508,6 +531,11 @@
     <span class="doccomment">/// Put a metric value.</span>
     <span class="doccomment">/// This value will be emitted to CloudWatch Metrics asyncronously and does not contribute to your</span>
     <span class="doccomment">/// account TPS limits. The value will also be available in your CloudWatch Logs</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Although the Value parameter accepts floating point numbers,</span>
+    <span class="doccomment">/// CloudWatch rejects values that are either too small or too large.</span>
+    <span class="doccomment">/// Values must be in the range of -2^360 to 2^360.</span>
+    <span class="doccomment">/// In addition, special values (for example, NaN, +Infinity, -Infinity) are not supported.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">put_metric</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">name</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
