@@ -6,7 +6,7 @@ use std::{
     convert::{TryFrom, TryInto},
     error::Error as StdError,
     io::{self, Write},
-    net::{TcpStream, UdpSocket},
+    net::{SocketAddr, TcpStream, ToSocketAddrs, UdpSocket},
     time::Duration,
 };
 
@@ -37,7 +37,7 @@ pub(crate) struct Agent {
 
 enum Transport {
     Tcp(TcpStream),
-    Udp(UdpSocket),
+    Udp((UdpSocket, SocketAddr)),
 }
 
 impl Transport {
@@ -47,8 +47,8 @@ impl Transport {
     ) {
         // todo: communicate errs
         match self {
-            Transport::Udp(stream) => {
-                drop(stream.send(bytes));
+            Transport::Udp((stream, addr)) => {
+                drop(stream.send_to(bytes, *addr));
             }
             Transport::Tcp(stream) => {
                 drop(stream.write_all(bytes));
@@ -68,10 +68,14 @@ impl TryFrom<Endpoint> for Transport {
                 Ok(Transport::Tcp(tcp))
             }
             Endpoint::Udp(host, port) => {
-                let udp = UdpSocket::bind((host.as_str(), port))?;
+                let udp = UdpSocket::bind("0.0.0.0:0")?;
                 udp.set_nonblocking(true)?;
                 udp.set_write_timeout(Some(Duration::from_secs(1)))?;
-                Ok(Transport::Udp(udp))
+                let addr = (host.as_str(), port)
+                    .to_socket_addrs()?
+                    .next()
+                    .expect("failed to resolve socket address");
+                Ok(Transport::Udp((udp, addr)))
             }
         }
     }
@@ -81,6 +85,17 @@ impl TryFrom<Endpoint> for Transport {
 enum Endpoint {
     Tcp(String, u16),
     Udp(String, u16),
+}
+
+impl ToSocketAddrs for Endpoint {
+    type Iter = std::vec::IntoIter<SocketAddr>;
+    fn to_socket_addrs(&self) -> io::Result<Self::Iter> {
+        let (host, port) = match self {
+            Endpoint::Tcp(host, port) => (host, port),
+            Endpoint::Udp(host, port) => (host, port),
+        };
+        (host.as_str(), *port).to_socket_addrs()
+    }
 }
 
 impl Agent {
@@ -100,10 +115,14 @@ impl Agent {
         config_endpoint: Option<String>,
         serializer: impl Serialize + 'static,
     ) -> Result<Self, Box<dyn StdError>> {
-        let transport = config_endpoint
+        let ep = config_endpoint
             .and_then(Self::parse)
-            .unwrap_or_else(|| Endpoint::Tcp("0.0.0.0".into(), 25888))
-            .try_into()?;
+            .unwrap_or_else(|| Endpoint::Tcp("0.0.0.0".into(), 25888));
+        let addr = ep
+            .to_socket_addrs()?
+            .next()
+            .expect("failed to resolve socket address");
+        let transport = ep.try_into()?;
         Ok(Self {
             log_group_name,
             log_stream_name,
