@@ -62,7 +62,10 @@ impl TryFrom<Endpoint> for Transport {
     fn try_from(ep: Endpoint) -> Result<Transport, Self::Error> {
         match ep {
             Endpoint::Tcp(host, port) => {
-                let tcp = TcpStream::connect((host.as_str(), port))?;
+                let tcp = TcpStream::connect_timeout(
+                    &(host.as_str(), port).into(),
+                    Duration::from_millis(50),
+                )?;
                 tcp.set_nonblocking(true)?;
                 tcp.set_write_timeout(Some(Duration::from_secs(1)))?;
                 Ok(Transport::Tcp(tcp))

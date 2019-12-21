@@ -10,9 +10,9 @@ description = "A client for reporting high cardinatlity metrics to AWS CloudWatc
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-envy = "0.4"
 hyper = "0.13"
-futures = "0.3"
+bytes = "0.5"
+envy = "0.4"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
