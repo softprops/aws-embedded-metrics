@@ -175,7 +175,7 @@ impl Default for MetricLogger {
     fn default() -> MetricLogger {
         MetricLogger {
             context: MetricContext::default(),
-            get_env: Box::new(Detector::default()),
+            get_env: Box::new(Detector),
         }
     }
 }

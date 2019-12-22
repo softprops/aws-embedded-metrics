@@ -1,7 +1,6 @@
 //! Sinks contains interfaces and implementations for reporting metric
 //! data to an external system
 use crate::{log::MetricContext, serialize::Serialize};
-use hyper::Uri;
 use std::{
     convert::{TryFrom, TryInto},
     error::Error as StdError,
@@ -9,6 +8,7 @@ use std::{
     net::{SocketAddr, TcpStream, ToSocketAddrs, UdpSocket},
     time::Duration,
 };
+use url::Url;
 
 pub(crate) trait Sink {
     fn accept(
@@ -62,10 +62,11 @@ impl TryFrom<Endpoint> for Transport {
     fn try_from(ep: Endpoint) -> Result<Transport, Self::Error> {
         match ep {
             Endpoint::Tcp(host, port) => {
-                let tcp = TcpStream::connect_timeout(
-                    &(host.as_str(), port).into(),
-                    Duration::from_millis(50),
-                )?;
+                let addr = (host.as_str(), port)
+                    .to_socket_addrs()?
+                    .next()
+                    .expect("failed to resolve socket address");
+                let tcp = TcpStream::connect_timeout(&addr, Duration::from_millis(50))?;
                 tcp.set_nonblocking(true)?;
                 tcp.set_write_timeout(Some(Duration::from_secs(1)))?;
                 Ok(Transport::Tcp(tcp))
@@ -103,11 +104,11 @@ impl ToSocketAddrs for Endpoint {
 
 impl Agent {
     fn parse(endpoint: impl AsRef<str>) -> Option<Endpoint> {
-        let uri = endpoint.as_ref().parse::<Uri>().ok()?;
-        let (host, port) = (uri.host()?, uri.port()?.as_u16());
-        match uri.scheme()?.as_str() {
-            "tcp" => Some(Endpoint::Tcp(host.into(), port)),
-            "udp" => Some(Endpoint::Udp(host.into(), port)),
+        let uri = endpoint.as_ref().parse::<Url>().ok()?;
+        let (host, port) = (uri.host()?, uri.port()?);
+        match uri.scheme() {
+            "tcp" => Some(Endpoint::Tcp(host.to_string(), port)),
+            "udp" => Some(Endpoint::Udp(host.to_string(), port)),
             _ => None,
         }
     }
@@ -121,10 +122,6 @@ impl Agent {
         let ep = config_endpoint
             .and_then(Self::parse)
             .unwrap_or_else(|| Endpoint::Tcp("0.0.0.0".into(), 25888));
-        let addr = ep
-            .to_socket_addrs()?
-            .next()
-            .expect("failed to resolve socket address");
         let transport = ep.try_into()?;
         Ok(Self {
             log_group_name,
@@ -151,7 +148,7 @@ impl Sink for Agent {
         }
 
         let payload = self.serializer.serialize(editable);
-        self.transport.send(&payload.as_bytes());
+        self.transport.send((payload + "\n").as_bytes());
     }
 }
 

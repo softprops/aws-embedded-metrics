@@ -1,6 +1,7 @@
 use crate::{config::Config, log::MetricContext};
 use serde::Deserialize;
 use std::{
+    borrow::Cow,
     env::var,
     io::{BufRead, BufReader, Write},
     net::TcpStream,
@@ -8,72 +9,65 @@ use std::{
 };
 
 pub(crate) trait EnvironmentProvider {
-    fn get(&mut self) -> &dyn Env;
+    fn get(&mut self) -> Box<dyn Env>;
 }
 
-pub(crate) struct Detector {
-    potentials: Vec<Box<dyn Env>>,
-    fallback: Box<dyn Env>,
-}
-
-impl Default for Detector {
-    fn default() -> Detector {
-        Detector {
-            potentials: vec![Box::new(Lambda), Box::new(EC2::new())],
-            fallback: Box::new(Fallback(crate::config::get())),
-        }
-    }
-}
+pub(crate) struct Detector;
 
 impl EnvironmentProvider for Detector {
-    fn get(&mut self) -> &dyn Env {
-        while let Some(mut env) = self.potentials.pop() {
+    fn get(&mut self) -> Box<dyn Env> {
+        let potentials: Vec<Box<dyn Env + 'static>> = vec![Box::new(Lambda), Box::new(EC2::new())];
+        for mut env in potentials.into_iter() {
             if env.probe() {
                 return env;
             }
         }
-
-        self.fallback.as_ref()
+        Box::new(Vars(crate::config::get()))
     }
 }
 
 pub(crate) trait Env {
     fn probe(&mut self) -> bool;
-    fn name(&self) -> String;
-    fn env_type(&self) -> String;
-    fn log_group_name(&self) -> String;
+    fn name(&self) -> Cow<'_, str>;
+    fn env_type(&self) -> Cow<'_, str>;
+    fn log_group_name(&self) -> Cow<'_, str>;
     fn configure(
         &self,
         context: &mut MetricContext,
     ) -> ();
 }
 
-pub(crate) struct Fallback(Config);
+pub(crate) struct Vars(Config);
 
-impl Env for Fallback {
+impl Env for Vars {
     fn probe(&mut self) -> bool {
         true
     }
 
-    fn name(&self) -> String {
+    fn name(&self) -> Cow<'_, str> {
         self.0
             .service_name
-            .clone()
-            .unwrap_or_else(|| "Unknown".into())
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or_else(|| "Unknown")
+            .into()
     }
 
-    fn env_type(&self) -> String {
+    fn env_type(&self) -> Cow<'_, str> {
         self.0
             .service_type
-            .clone()
-            .unwrap_or_else(|| "Unknown".into())
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or_else(|| "Unknown")
+            .into()
     }
 
-    fn log_group_name(&self) -> String {
+    fn log_group_name(&self) -> Cow<'_, str> {
         self.0
             .log_group_name
             .clone()
             .unwrap_or_else(|| format!("{}-metrics", self.name()))
+            .into()
     }
 
     fn configure(
@@ -90,15 +84,17 @@ impl Env for Lambda {
         var("AWS_LAMBDA_FUNCTION_NAME").is_ok()
     }
 
-    fn name(&self) -> String {
-        var("AWS_LAMBDA_FUNCTION_NAME").unwrap_or_else(|_| "Unknown".into())
+    fn name(&self) -> Cow<'_, str> {
+        var("AWS_LAMBDA_FUNCTION_NAME")
+            .unwrap_or_else(|_| "Unknown".into())
+            .into()
     }
 
-    fn env_type(&self) -> String {
+    fn env_type(&self) -> Cow<'_, str> {
         "AWS::Lambda::Function".into()
     }
 
-    fn log_group_name(&self) -> String {
+    fn log_group_name(&self) -> Cow<'_, str> {
         self.name()
     }
 
@@ -152,7 +148,7 @@ impl EC2 {
     /// fetch ec2 instance metadata from well known http endpont
     fn fetch(&self) -> Result<EC2MetadataResponse, EC2Error> {
         // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
-        let conn = TcpStream::connect_timeout(
+        let mut conn = TcpStream::connect_timeout(
             &([169, 254, 169, 254], 80).into(),
             Duration::from_millis(50),
         )
@@ -162,11 +158,11 @@ impl EC2 {
 
         conn.write_all(
             b"GET /latest/dynamic/instance-identity/document HTTP/1.1\r\nHost: 169.254.169.254\r\n\r\n",
-        ).map_err(EC2Error::Io);
+        )
+        .map_err(EC2Error::Io)?;
 
         let response = BufReader::new(conn).lines().filter_map(Result::ok).skip(9);
-
-        serde_json::from_reader(conn).map_err(EC2Error::Parse)
+        serde_json::from_str(&response.collect::<Vec<_>>().join("")).map_err(EC2Error::Parse)
     }
 }
 
@@ -179,14 +175,16 @@ impl Env for EC2 {
         self.probe()
     }
 
-    fn name(&self) -> String {
+    fn name(&self) -> Cow<'_, str> {
         self.config
             .service_name
-            .clone()
-            .unwrap_or_else(|| "Unknown".into())
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or_else(|| "Unknown")
+            .into()
     }
 
-    fn env_type(&self) -> String {
+    fn env_type(&self) -> Cow<'_, str> {
         if self.metadata.is_some() {
             "AWS::EC2::Instance".into()
         } else {
@@ -194,11 +192,12 @@ impl Env for EC2 {
         }
     }
 
-    fn log_group_name(&self) -> String {
+    fn log_group_name(&self) -> Cow<'_, str> {
         self.config
             .service_name
-            .clone()
-            .unwrap_or_else(|| format!("{}-metrics", self.name()))
+            .as_ref()
+            .map(|s| s.into())
+            .unwrap_or_else(|| format!("{}-metrics", self.name()).into())
     }
 
     fn configure(
